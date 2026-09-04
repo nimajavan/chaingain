@@ -156,7 +156,7 @@ export default function Home() {
             <StepCard number="01" icon={<Wallet />} title="Connect" body="Use your wallet. No email, password, or custodial account." />
             <StepCard number="02" icon={<Ticket />} title="Buy tickets" body="Approve the exact USDT total on TRON, then enter the active draw." />
             <StepCard number="03" icon={<Sparkles />} title="VRF selects" body="WINkLink delivers randomness that anyone can verify on TRON." />
-            <StepCard number="04" icon={<CircleDollarSign />} title="Contract pays" body="70% moves to the winner and 30% to the treasury automatically." />
+            <StepCard number="04" icon={<CircleDollarSign />} title="Contract allocates" body="70% becomes claimable by the winner and 30% by the treasury." />
           </div>
         </section>
 

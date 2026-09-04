@@ -65,6 +65,7 @@ contract LottoChain {
     mapping(uint256 drawId => mapping(address player => uint32 count)) public ticketsByWallet;
     mapping(uint256 drawId => mapping(address player => uint256 amount)) public contributionByWallet;
     mapping(uint256 drawId => mapping(address player => bool claimed)) public refundClaimed;
+    mapping(uint256 drawId => mapping(address beneficiary => uint256 amount)) public claimablePayout;
 
     uint256 private _reentrancyLock = 1;
 
@@ -79,6 +80,7 @@ contract LottoChain {
     error TokenTransferFailed();
     error InvalidRandomnessRequest();
     error NothingToRefund();
+    error NothingToClaim();
     error Reentrancy();
 
     event DrawOpened(uint256 indexed drawId, uint64 openedAt, uint64 closesAt);
@@ -93,6 +95,12 @@ contract LottoChain {
         uint256 randomWord
     );
     event RefundClaimed(uint256 indexed drawId, address indexed player, uint256 amount);
+    event PayoutClaimed(
+        uint256 indexed drawId,
+        address indexed beneficiary,
+        address indexed recipient,
+        uint256 amount
+    );
     event OracleUpdated(address indexed previousOracle, address indexed newOracle);
     event PauseUpdated(bool paused);
     event AdminTransferStarted(address indexed currentAdmin, address indexed pendingAdmin);
@@ -229,10 +237,23 @@ contract LottoChain {
         draw.state = DrawState.Settled;
         draw.winner = winner;
         draw.randomWord = randomWord;
+        claimablePayout[drawId][winner] += winnerPayout;
+        claimablePayout[drawId][treasury] += treasuryPayout;
 
-        _safeTransfer(address(paymentToken), winner, winnerPayout);
-        _safeTransfer(address(paymentToken), treasury, treasuryPayout);
         emit DrawSettled(drawId, winner, winnerPayout, treasuryPayout, randomWord);
+    }
+
+    /// @notice Withdraws the caller's settled allocation to a chosen non-zero address.
+    /// @dev Pull payments keep a rejecting token recipient from blocking oracle settlement.
+    function claimPayout(uint256 drawId, address recipient) external nonReentrant {
+        if (_draws[drawId].state != DrawState.Settled) revert InvalidState();
+        if (recipient == address(0)) revert InvalidConfiguration();
+
+        uint256 amount = claimablePayout[drawId][msg.sender];
+        if (amount == 0) revert NothingToClaim();
+        claimablePayout[drawId][msg.sender] = 0;
+        _safeTransfer(address(paymentToken), recipient, amount);
+        emit PayoutClaimed(drawId, msg.sender, recipient, amount);
     }
 
     /// @notice Returns the owner of a zero-based ticket index using cumulative purchase ranges.

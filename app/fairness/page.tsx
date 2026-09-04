@@ -29,7 +29,7 @@ export default function FairnessPage() {
             <VerifyStep number="1" title="Open the fulfillment transaction" body="Confirm the VRF coordinator fulfilled the request linked to that draw." />
             <VerifyStep number="2" title="Read the random word" body="Use the exact uint256 value emitted with the finished draw event." />
             <VerifyStep number="3" title="Apply the modulo" body="Divide by the final ticket count and keep the remainder." />
-            <VerifyStep number="4" title="Match the ticket index" body="The address holding that indexed ticket is the winner paid by the contract." />
+            <VerifyStep number="4" title="Match the ticket index" body="The address holding that indexed ticket is the winner entitled to claim the payout." />
           </ol>
         </div>
       </section>

@@ -2,6 +2,9 @@
 
 This directory contains the first auditable contract slice for the TRON lottery.
 
+The current internal review and unresolved Mainnet gates are documented in
+[`docs/security-audit-2026-09-04.md`](../docs/security-audit-2026-09-04.md).
+
 ## Safety status
 
 The contract is **not audited and must not hold real funds yet**. Unit tests run in
@@ -13,7 +16,8 @@ and complete an independent security audit.
 
 - fixed payment token, treasury, ticket price, minimum players, and wallet limit;
 - exact `transferFrom` accounting rejects fee-on-transfer behavior;
-- 70% winner / 30% treasury settlement with no rounding remainder;
+- 70% winner / 30% treasury allocation with no rounding remainder;
+- pull-based payouts so a rejecting recipient cannot block oracle settlement;
 - only the configured oracle can fulfill a matching randomness request;
 - permissionless refunds if the oracle misses its configured response deadline;
 - exact pull-based refunds when minimum participation is missed;

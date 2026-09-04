@@ -18,9 +18,23 @@ contract MockUSDT is ITRC20 {
 
     mapping(address => uint256) public override balanceOf;
     mapping(address => mapping(address => uint256)) public allowance;
+    mapping(address => bool) public blockedRecipient;
+    address public reentryActor;
+    address public reentryLottery;
+    bool public reentryAttempted;
+    bool public reentrySucceeded;
 
     function mint(address recipient, uint256 amount) external {
         balanceOf[recipient] += amount;
+    }
+
+    function setBlockedRecipient(address recipient, bool blocked) external {
+        blockedRecipient[recipient] = blocked;
+    }
+
+    function configurePurchaseReentry(address actor, address lottery) external {
+        reentryActor = actor;
+        reentryLottery = lottery;
     }
 
     function approve(address spender, uint256 amount) external returns (bool) {
@@ -37,11 +51,20 @@ contract MockUSDT is ITRC20 {
         uint256 permitted = allowance[sender][msg.sender];
         require(permitted >= amount, "allowance");
         allowance[sender][msg.sender] = permitted - amount;
+        if (reentryActor != address(0)) {
+            address actor = reentryActor;
+            reentryActor = address(0);
+            reentryAttempted = true;
+            (reentrySucceeded,) = actor.call(
+                abi.encodeWithSignature("buy(address,uint32)", reentryLottery, uint32(1))
+            );
+        }
         _transfer(sender, recipient, amount);
         return true;
     }
 
     function _transfer(address sender, address recipient, uint256 amount) private {
+        require(!blockedRecipient[recipient], "blocked recipient");
         require(balanceOf[sender] >= amount, "balance");
         balanceOf[sender] -= amount;
         balanceOf[recipient] += amount;
@@ -87,6 +110,10 @@ contract Player {
     function acceptAdmin(LottoChain lottery) external {
         lottery.acceptAdmin();
     }
+
+    function claim(LottoChain lottery, uint256 drawId, address recipient) external {
+        lottery.claimPayout(drawId, recipient);
+    }
 }
 
 contract LottoChainTest {
@@ -100,13 +127,14 @@ contract LottoChainTest {
     LottoChain private lottery;
     Player private alice;
     Player private bob;
-    address private constant TREASURY = address(0xBEEF);
+    Player private treasury;
 
     function setUp() public {
         token = new MockUSDT();
         oracle = new MockOracle();
+        treasury = new Player();
         lottery = new LottoChain(
-            address(token), TREASURY, address(this), address(oracle), TICKET_PRICE, 2, 100, 1 days
+            address(token), address(treasury), address(this), address(oracle), TICKET_PRICE, 2, 100, 1 days
         );
         oracle.setConsumer(address(lottery));
 
@@ -155,6 +183,17 @@ contract LottoChainTest {
         require(lottery.ticketsByWallet(1, address(alice)) == 100, "wallet limit");
     }
 
+    function testPurchaseRejectsTokenReentrancy() public {
+        _openDraw();
+        token.configurePurchaseReentry(address(alice), address(lottery));
+        alice.buy(lottery, 1);
+
+        require(token.reentryAttempted(), "reentry not attempted");
+        require(!token.reentrySucceeded(), "reentry succeeded");
+        require(lottery.ticketsByWallet(1, address(alice)) == 1, "reentry changed tickets");
+        require(lottery.getDraw(1).pool == TICKET_PRICE, "reentry changed pool");
+    }
+
     function testOnlyAdminCanStartDraw() public {
         _expectFailure(address(alice), abi.encodeCall(Player.start, (lottery, uint64(block.timestamp + 1 days))));
     }
@@ -199,7 +238,7 @@ contract LottoChainTest {
         _expectFailure(address(alice), abi.encodeCall(Player.refund, (lottery, 1)));
     }
 
-    function testVerifiedRandomnessPaysWinnerAndTreasuryExactly() public {
+    function testVerifiedRandomnessAllocatesAndClaimsPayoutsExactly() public {
         _openDraw();
         alice.buy(lottery, 1);
         bob.buy(lottery, 2);
@@ -212,9 +251,33 @@ contract LottoChainTest {
         LottoChain.Draw memory settled = lottery.getDraw(1);
         require(settled.state == LottoChain.DrawState.Settled, "not settled");
         require(settled.winner == address(bob), "wrong winner");
-        require(token.balanceOf(TREASURY) == 9 * USDT, "treasury split");
+        require(lottery.claimablePayout(1, address(bob)) == 21 * USDT, "winner allocation");
+        require(lottery.claimablePayout(1, address(treasury)) == 9 * USDT, "treasury allocation");
+        require(token.balanceOf(address(lottery)) == 30 * USDT, "pool moved before claims");
+
+        bob.claim(lottery, 1, address(bob));
+        treasury.claim(lottery, 1, address(treasury));
+        require(token.balanceOf(address(treasury)) == 9 * USDT, "treasury split");
         require(token.balanceOf(address(bob)) == STARTING_BALANCE + 1 * USDT, "winner payout");
         require(token.balanceOf(address(lottery)) == 0, "pool retained");
+        _expectFailure(address(bob), abi.encodeCall(Player.claim, (lottery, 1, address(bob))));
+    }
+
+    function testRejectingRecipientCannotBlockSettlement() public {
+        _openDraw();
+        alice.buy(lottery, 1);
+        bob.buy(lottery, 1);
+        _expireAndClose();
+
+        token.setBlockedRecipient(address(bob), true);
+        LottoChain.Draw memory pending = lottery.getDraw(1);
+        oracle.fulfill(pending.requestId, 1, 1);
+        require(lottery.getDraw(1).state == LottoChain.DrawState.Settled, "settlement blocked");
+
+        _expectFailure(address(bob), abi.encodeCall(Player.claim, (lottery, 1, address(bob))));
+        require(lottery.claimablePayout(1, address(bob)) == 14 * USDT, "failed claim lost allocation");
+        bob.claim(lottery, 1, address(alice));
+        require(lottery.claimablePayout(1, address(bob)) == 0, "redirected claim retained");
     }
 
     function testRejectsUnverifiedRandomnessCallback() public {
