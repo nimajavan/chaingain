@@ -21,6 +21,7 @@ jobs:
       - name: Compile contracts
         shell: bash
         run: |
+          set +e
           set -o pipefail
           npm run contracts:compile 2>&1 | tee contracts-compile.log
           status=${PIPESTATUS[0]}
@@ -30,6 +31,9 @@ jobs:
             tail -n 120 contracts-compile.log
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
+          if [ "$status" -ne 0 ]; then
+            node -e "const fs=require('node:fs'); const value=fs.readFileSync('contracts-compile.log','utf8').slice(-5000).replace(/%/g,'%25').replace(/\r/g,'%0D').replace(/\n/g,'%0A'); console.log('::error title=Solidity compile failed::'+value)"
+          fi
           exit "$status"
       - run: npm run contracts:test
       - run: npm run test
