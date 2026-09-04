@@ -5,24 +5,30 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { ArrowLeft, Check, Copy, ExternalLink, ShieldCheck, Trophy } from "lucide-react";
 import { toast } from "sonner";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { drawHistory, formatUsdt, shortAddress, TREASURY_BPS } from "../../data";
+import { formatUsdt, loadApi, shortAddress, type IndexedDraw } from "../../data";
 import { useLotto } from "../../components/client-shell";
 
 const confettiColors = ["#F59E0B", "#A855F7", "#10B981", "#FDE68A", "#7C3AED"];
 
 export default function DrawResultPage() {
   const params = useParams<{ id: string }>();
-  const { account } = useLotto();
-  const draw = drawHistory.find((entry) => String(entry.id) === params.id) ?? drawHistory[0];
-  const isYou = account?.toLowerCase() === draw.winner.toLowerCase();
-  const total = draw.prize * 10_000n / (10_000n - TREASURY_BPS);
-  const treasury = total - draw.prize;
+  const { account, network } = useLotto();
+  const [draw, setDraw] = useState<IndexedDraw | null>(null);
+  useEffect(() => { void loadApi<IndexedDraw>(`/api/draws/${encodeURIComponent(params.id)}`).then(setDraw); }, [params.id]);
 
   const copy = async (value: string, label: string) => {
     await navigator.clipboard.writeText(value);
     toast.success(`${label} copied`);
   };
+
+  if (!draw) return <main className="mx-auto min-h-[70vh] max-w-3xl px-4 py-24 text-center"><ShieldCheck className="mx-auto h-10 w-10 text-zinc-700"/><h1 className="display-font mt-5 text-2xl font-semibold text-white">Draw not finalized or not indexed</h1><p className="mt-3 text-zinc-500">Only confirmed on-chain results can be displayed.</p></main>;
+  const winner = draw.winner ?? "";
+  const prize = BigInt(draw.winner_payout_atomic ?? "0");
+  const treasury = BigInt(draw.treasury_payout_atomic ?? "0");
+  const total = prize + treasury;
+  const isYou = account?.toLowerCase() === winner.toLowerCase();
 
   return (
     <main className="relative min-h-[70vh] overflow-hidden">
@@ -37,23 +43,23 @@ export default function DrawResultPage() {
 
         <section className="mt-8 text-center">
           <div className="trophy-float mx-auto flex h-22 w-22 items-center justify-center rounded-[26px] border border-amber-300/20 bg-amber-400/10 text-amber-300 shadow-[0_0_60px_rgba(245,158,11,.18)]"><Trophy className="h-11 w-11" strokeWidth={1.7} /></div>
-          <p className="mt-7 text-sm font-semibold uppercase tracking-[.22em] text-emerald-400">Draw #{draw.id} complete</p>
+          <p className="mt-7 text-sm font-semibold uppercase tracking-[.22em] text-emerald-400">Draw #{draw.draw_id} complete</p>
           <h1 className="display-font mt-3 text-4xl font-bold tracking-tight text-white sm:text-6xl">We have a winner</h1>
           <div className="mt-6 inline-flex flex-wrap items-center justify-center gap-2 rounded-2xl border border-white/[.08] bg-white/[.035] px-4 py-3 sm:px-6">
-            <span className="mono text-sm text-zinc-200 sm:text-base">{shortAddress(draw.winner)}</span>
+            <span className="mono text-sm text-zinc-200 sm:text-base">{shortAddress(winner)}</span>
             {isYou && <span className="rounded-md bg-amber-400/10 px-2 py-1 text-xs font-bold text-amber-300">YOU 🎉</span>}
-            <button onClick={() => copy(draw.winner, "Winner address")} className="focus-ring rounded-lg p-1.5 text-zinc-500 transition hover:bg-white/[.06] hover:text-white" aria-label="Copy winner address"><Copy className="h-4 w-4" /></button>
+            <button onClick={() => copy(winner, "Winner address")} className="focus-ring rounded-lg p-1.5 text-zinc-500 transition hover:bg-white/[.06] hover:text-white" aria-label="Copy winner address"><Copy className="h-4 w-4" /></button>
           </div>
           <p className="mt-8 text-sm uppercase tracking-[.16em] text-zinc-600">Winner payout</p>
-          <p className="display-font gold-text mt-2 text-5xl font-bold tracking-tight sm:text-7xl">${formatUsdt(draw.prize)}</p>
-          <p className="mono mt-2 text-sm text-zinc-500">{formatUsdt(draw.prize)} USDT</p>
+          <p className="display-font gold-text mt-2 text-5xl font-bold tracking-tight sm:text-7xl">${formatUsdt(prize)}</p>
+          <p className="mono mt-2 text-sm text-zinc-500">{formatUsdt(prize)} USDT</p>
         </section>
 
         <section className="glass mt-12 rounded-[24px] p-5 sm:p-7">
           <div className="flex flex-wrap items-end justify-between gap-3"><div><p className="text-sm text-zinc-500">Contract-enforced payout</p><h2 className="display-font mt-1 text-2xl font-semibold text-white">70 / 30 split</h2></div><p className="mono text-sm text-zinc-500">Total pool: {formatUsdt(total)} USDT</p></div>
           <div className="mt-6 flex h-4 overflow-hidden rounded-full bg-white/[.05]"><div className="w-[70%] bg-gradient-to-r from-amber-500 to-amber-300" /><div className="w-[30%] bg-gradient-to-r from-violet-600 to-fuchsia-500" /></div>
           <div className="mt-5 grid gap-3 sm:grid-cols-2">
-            <SplitCard color="amber" label="Winner · 70%" value={`${formatUsdt(draw.prize)} USDT`} />
+            <SplitCard color="amber" label="Winner · 70%" value={`${formatUsdt(prize)} USDT`} />
             <SplitCard color="violet" label="Treasury · 30%" value={`${formatUsdt(treasury)} USDT`} />
           </div>
         </section>
@@ -64,14 +70,14 @@ export default function DrawResultPage() {
             <div><div className="flex flex-wrap items-center gap-2"><h2 id="proof-heading" className="display-font text-xl font-semibold text-white">WINkLink VRF proof</h2><span className="inline-flex items-center gap-1 rounded-full bg-emerald-400/[.08] px-2 py-1 text-xs font-semibold text-emerald-300"><Check className="h-3 w-3" /> Verifiable on TRON</span></div><p className="mt-2 text-sm leading-6 text-zinc-500">The returned random word maps deterministically to the winning ticket index.</p></div>
           </div>
           <dl className="mt-6 space-y-3">
-            <ProofRow label="Random word" value={draw.randomWord} onCopy={() => copy(draw.randomWord, "Random word")} />
-            <ProofRow label="Fulfillment tx" value={draw.txHash} onCopy={() => copy(draw.txHash, "Transaction hash")} />
+            <ProofRow label="Random word" value={draw.random_word ?? ""} onCopy={() => copy(draw.random_word ?? "", "Random word")} />
+            <ProofRow label="Fulfillment tx" value={draw.settlement_transaction_id ?? ""} onCopy={() => copy(draw.settlement_transaction_id ?? "", "Transaction hash")} />
           </dl>
-          <p className="mt-4 rounded-xl bg-amber-400/[.06] px-4 py-3 text-xs leading-5 text-amber-100/60">Sample evidence is illustrative. Explorer links activate after the audited TRON contract and WINkLink consumer are deployed.</p>
+          <p className="mt-4 rounded-xl bg-emerald-400/[.06] px-4 py-3 text-xs leading-5 text-emerald-100/60">This evidence comes from a confirmed indexed TRON event. Verify the transaction independently before relying on it.</p>
         </section>
 
         <div className="mt-7 flex flex-col justify-center gap-3 sm:flex-row">
-          <Button disabled variant="outline" className="h-11 rounded-xl border-white/[.09] bg-white/[.035] px-5 text-zinc-400"><ExternalLink className="h-4 w-4" /> Explorer pending deployment</Button>
+          <Button asChild variant="outline" className="h-11 rounded-xl border-white/[.09] bg-white/[.035] px-5 text-zinc-400"><a href={`${network === "mainnet" ? "https://tronscan.org" : `https://${network}.tronscan.org`}/#/transaction/${draw.settlement_transaction_id}`} target="_blank" rel="noreferrer"><ExternalLink className="h-4 w-4" /> View on TRONSCAN</a></Button>
           <Button asChild className="primary-gradient primary-glow h-11 rounded-xl px-6 font-semibold"><Link href="/">Enter next draw</Link></Button>
         </div>
       </div>

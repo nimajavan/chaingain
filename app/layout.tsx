@@ -12,10 +12,12 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   const lotteryAddress = process.env.TRON_LOTTERY_ADDRESS ?? "";
+  const paymentTokenAddress = process.env.TRON_PAYMENT_TOKEN_ADDRESS ?? "";
+  const network = (process.env.TRON_NETWORK ?? "prelaunch").toLowerCase();
   return (
     <html lang="en" className="dark">
       <body className="antialiased">
-        <ClientShell lotteryAddress={lotteryAddress}>{children}</ClientShell>
+        <ClientShell lotteryAddress={lotteryAddress} paymentTokenAddress={paymentTokenAddress} network={network}>{children}</ClientShell>
       </body>
     </html>
   );

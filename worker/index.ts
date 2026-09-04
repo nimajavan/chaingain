@@ -1,10 +1,16 @@
 /** Cloudflare Worker entry point for the vinext-starter template. */
 import { handleImageOptimization, DEFAULT_DEVICE_SIZES, DEFAULT_IMAGE_SIZES } from "vinext/server/image-optimization";
 import handler from "vinext/server/app-router-entry";
+import { handleApi } from "./api";
+import { syncConfirmedEvents, type IndexerEnv } from "./indexer";
 
 interface Env {
   ASSETS: Fetcher;
   DB: D1Database;
+  TRON_NETWORK?: string;
+  TRON_LOTTERY_ADDRESS?: string;
+  TRONGRID_API_KEY?: string;
+  TRON_EVENT_API_BASE?: string;
   IMAGES: {
     input(stream: ReadableStream): {
       transform(options: Record<string, unknown>): {
@@ -29,19 +35,38 @@ const worker = {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
 
+    if (url.pathname.startsWith("/api/")) ctx.waitUntil(syncConfirmedEvents(env as IndexerEnv));
+
+    const apiResponse = await handleApi(request, env as IndexerEnv);
+    if (apiResponse) return apiResponse;
+
     if (url.pathname === "/_vinext/image") {
       const allowedWidths = [...DEFAULT_DEVICE_SIZES, ...DEFAULT_IMAGE_SIZES];
-      return handleImageOptimization(request, {
+      return secure(await handleImageOptimization(request, {
         fetchAsset: (path) => env.ASSETS.fetch(new Request(new URL(path, request.url))),
         transformImage: async (body, { width, format, quality }) => {
           const result = await env.IMAGES.input(body).transform(width > 0 ? { width } : {}).output({ format, quality });
           return result.response();
         },
-      }, allowedWidths);
+      }, allowedWidths));
     }
 
-    return handler.fetch(request, env, ctx);
+    return secure(await handler.fetch(request, env, ctx));
+  },
+  async scheduled(_controller: unknown, env: Env, ctx: ExecutionContext) {
+    ctx.waitUntil(syncConfirmedEvents(env as IndexerEnv));
   },
 };
+
+function secure(response: Response) {
+  const secured = new Response(response.body, response);
+  secured.headers.set("x-content-type-options", "nosniff");
+  secured.headers.set("x-frame-options", "DENY");
+  secured.headers.set("referrer-policy", "strict-origin-when-cross-origin");
+  secured.headers.set("permissions-policy", "camera=(), microphone=(), geolocation=()");
+  secured.headers.set("strict-transport-security", "max-age=31536000; includeSubDomains");
+  secured.headers.set("content-security-policy", "default-src 'self'; connect-src 'self' https://*.trongrid.io; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'");
+  return secured;
+}
 
 export default worker;

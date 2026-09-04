@@ -27,7 +27,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { formatUsdt, TICKET_PRICE, TRON_USDT_ADDRESS } from "../data";
+import { formatUsdt, TICKET_PRICE } from "../data";
 
 type PurchaseState = "idle" | "approving" | "buying" | "success";
 
@@ -65,6 +65,7 @@ type LottoContextValue = {
   openBuy: () => void;
   lotteryAddress: string;
   isLive: boolean;
+  network: string;
 };
 
 const LottoContext = createContext<LottoContextValue | null>(null);
@@ -116,12 +117,14 @@ function friendlyTronError(error: unknown): string {
   return "The transaction could not be completed. No successful confirmation was received.";
 }
 
-function BuyDialog({ open, onOpenChange, account, connect, lotteryAddress, isLive }: {
+function BuyDialog({ open, onOpenChange, account, connect, lotteryAddress, paymentTokenAddress, network, isLive }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   account: string | null;
   connect: () => Promise<void>;
   lotteryAddress: string;
+  paymentTokenAddress: string;
+  network: string;
   isLive: boolean;
 }) {
   const [quantity, setQuantity] = useState(1);
@@ -137,7 +140,7 @@ function BuyDialog({ open, onOpenChange, account, connect, lotteryAddress, isLiv
       try {
         const tronWeb = getTronWindow().tronWeb;
         if (!tronWeb) return;
-        const usdt = await tronWeb.contract().at(TRON_USDT_ADDRESS);
+        const usdt = await tronWeb.contract().at(paymentTokenAddress);
         if (!usdt.balanceOf) throw new Error("USDT balanceOf unavailable");
         const result = await usdt.balanceOf(account).call();
         if (active) setBalance(asBigInt(result));
@@ -147,7 +150,7 @@ function BuyDialog({ open, onOpenChange, account, connect, lotteryAddress, isLiv
     };
     void loadBalance();
     return () => { active = false; };
-  }, [account, open]);
+  }, [account, open, paymentTokenAddress]);
 
   const resetAndClose = (nextOpen: boolean) => {
     onOpenChange(nextOpen);
@@ -176,7 +179,7 @@ function BuyDialog({ open, onOpenChange, account, connect, lotteryAddress, isLiv
     }
     try {
       setState("approving");
-      const usdt = await tronWeb.contract().at(TRON_USDT_ADDRESS);
+      const usdt = await tronWeb.contract().at(paymentTokenAddress);
       if (!usdt.approve) throw new Error("USDT approve unavailable");
       await usdt.approve(lotteryAddress, total.toString()).send({ feeLimit: 100_000_000, shouldPollResponse: true });
 
@@ -201,7 +204,7 @@ function BuyDialog({ open, onOpenChange, account, connect, lotteryAddress, isLiv
       <DialogContent className="max-h-[92vh] overflow-y-auto border-white/10 bg-[#0b1020]/95 p-0 text-zinc-100 shadow-2xl backdrop-blur-2xl sm:max-w-[520px]">
         <DialogHeader className="border-b border-white/[.07] px-6 pb-5 pt-6 text-left">
           <div className={`mb-2 flex items-center gap-2 text-sm font-medium ${isLive ? "text-emerald-300" : "text-amber-300"}`}>
-            <span className={`h-2 w-2 rounded-full ${isLive ? "live-dot bg-emerald-400" : "bg-amber-400"}`} /> {isLive ? "TRON Mainnet draw is open" : "Mainnet activation gate"}
+            <span className={`h-2 w-2 rounded-full ${isLive ? "live-dot bg-emerald-400" : "bg-amber-400"}`} /> {isLive ? `TRON ${network} draw is open` : `${network} activation gate`}
           </div>
           <DialogTitle className="display-font text-2xl">Buy lottery tickets</DialogTitle>
           <DialogDescription className="text-sm leading-6 text-zinc-400">
@@ -214,7 +217,7 @@ function BuyDialog({ open, onOpenChange, account, connect, lotteryAddress, isLiv
             <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-400/10 text-emerald-400"><Check className="h-8 w-8" strokeWidth={2.5} /></div>
             <h3 className="display-font mt-5 text-2xl font-semibold">Confirmed on TRON</h3>
             <p className="mt-2 text-zinc-400">{quantity} ticket{quantity > 1 ? "s" : ""} secured for {formatUsdt(total)} USDT.</p>
-            {lastTransaction && <a href={`https://tronscan.org/#/transaction/${lastTransaction}`} target="_blank" rel="noreferrer" className="mono mx-auto mt-5 flex max-w-sm items-center justify-center gap-2 rounded-xl border border-white/[.07] bg-white/[.025] px-4 py-3 text-xs text-zinc-400 transition hover:text-white">View transaction <ExternalLink className="h-3.5 w-3.5" /></a>}
+            {lastTransaction && <a href={`${network === "mainnet" ? "https://tronscan.org" : `https://${network}.tronscan.org`}/#/transaction/${lastTransaction}`} target="_blank" rel="noreferrer" className="mono mx-auto mt-5 flex max-w-sm items-center justify-center gap-2 rounded-xl border border-white/[.07] bg-white/[.025] px-4 py-3 text-xs text-zinc-400 transition hover:text-white">View transaction <ExternalLink className="h-3.5 w-3.5" /></a>}
             <Button onClick={() => resetAndClose(false)} className="primary-gradient primary-glow mt-6 h-12 w-full rounded-xl text-base font-semibold">Done</Button>
           </div>
         ) : (
@@ -257,12 +260,20 @@ function TransactionStep({ index, label, active, complete }: { index: number; la
   return <div className="flex items-center gap-3"><span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full border text-sm font-semibold ${complete ? "border-emerald-400/30 bg-emerald-400/10 text-emerald-400" : active ? "border-violet-400/40 bg-violet-400/10 text-violet-300" : "border-white/10 bg-white/[.04] text-zinc-500"}`}>{complete ? <Check className="h-4 w-4" /> : active ? <LoaderCircle className="h-4 w-4 animate-spin" /> : index}</span><div className="flex-1"><p className={`text-sm font-medium ${active || complete ? "text-zinc-100" : "text-zinc-500"}`}>{label}</p><p className="mt-0.5 text-xs text-zinc-600">{complete ? "Confirmed" : active ? "Waiting for TronLink" : "Not started"}</p></div></div>;
 }
 
-export function ClientShell({ children, lotteryAddress }: { children: React.ReactNode; lotteryAddress: string }) {
+export function ClientShell({ children, lotteryAddress, paymentTokenAddress, network }: { children: React.ReactNode; lotteryAddress: string; paymentTokenAddress: string; network: string }) {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
   const [buyOpen, setBuyOpen] = useState(false);
   const [account, setAccount] = useState<string | null>(null);
-  const isLive = /^T[1-9A-HJ-NP-Za-km-z]{33}$/.test(lotteryAddress);
+  const [isLive, setIsLive] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    fetch("/api/health", { cache: "no-store" }).then((response) => response.json()).then((health: { status?: string; network?: string; contractAddress?: string }) => {
+      if (active) setIsLive(health.status === "ready" && health.network === network && health.contractAddress === lotteryAddress && /^T[1-9A-HJ-NP-Za-km-z]{33}$/.test(paymentTokenAddress));
+    }).catch(() => { if (active) setIsLive(false); });
+    return () => { active = false; };
+  }, [lotteryAddress, network, paymentTokenAddress]);
 
   const connect = useCallback(async () => {
     const browserWindow = getTronWindow();
@@ -275,18 +286,19 @@ export function ClientShell({ children, lotteryAddress }: { children: React.Reac
       const address = browserWindow.tronWeb.defaultAddress?.base58;
       if (!address) throw new Error("No TRON account returned");
       const host = browserWindow.tronWeb.fullNode?.host?.toLowerCase() ?? "";
-      if (host.includes("shasta") || host.includes("nile")) {
-        toast.warning("Switch TronLink to TRON Mainnet before purchasing.");
+      const walletNetwork = host.includes("shasta") ? "shasta" : host.includes("nile") ? "nile" : "mainnet";
+      if (walletNetwork !== network) {
+        toast.warning(`Switch TronLink to TRON ${network} before purchasing.`);
         return;
       }
       setAccount(address);
-      toast.success("TronLink connected on TRON Mainnet");
+      toast.success(`TronLink connected on TRON ${network}`);
     } catch (error) {
       toast.error(friendlyTronError(error));
     }
-  }, []);
+  }, [network]);
 
-  const contextValue = useMemo(() => ({ account, connect, openBuy: () => setBuyOpen(true), lotteryAddress, isLive }), [account, connect, lotteryAddress, isLive]);
+  const contextValue = useMemo(() => ({ account, connect, openBuy: () => setBuyOpen(true), lotteryAddress, isLive, network }), [account, connect, lotteryAddress, isLive, network]);
 
   return (
     <LottoContext.Provider value={contextValue}>
@@ -296,7 +308,7 @@ export function ClientShell({ children, lotteryAddress }: { children: React.Reac
             <Link href="/" className="focus-ring flex items-center gap-2.5 rounded-lg" aria-label="LottoChain home"><span className="primary-gradient primary-glow flex h-9 w-9 items-center justify-center rounded-xl"><Ticket className="h-5 w-5 text-white" /></span><span className="display-font text-lg font-bold tracking-tight text-white">Lotto<span className="text-violet-400">Chain</span></span></Link>
             <nav className="hidden items-center gap-1 md:flex" aria-label="Primary navigation">{navItems.map((item) => { const active = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href); return <Link key={item.href} href={item.href} className={`focus-ring rounded-lg px-3.5 py-2 text-sm font-medium transition ${active ? "bg-white/[.07] text-white" : "text-zinc-400 hover:bg-white/[.04] hover:text-zinc-100"}`}>{item.label}</Link>; })}</nav>
             <div className="flex items-center gap-2">
-              <div className="hidden items-center gap-2 rounded-lg border border-white/[.07] bg-white/[.03] px-3 py-2 text-xs text-zinc-400 sm:flex"><span className={`h-2 w-2 rounded-full ${isLive ? "bg-emerald-400" : "bg-amber-400"}`} /> TRON Mainnet</div>
+              <div className="hidden items-center gap-2 rounded-lg border border-white/[.07] bg-white/[.03] px-3 py-2 text-xs text-zinc-400 sm:flex"><span className={`h-2 w-2 rounded-full ${isLive ? "bg-emerald-400" : "bg-amber-400"}`} /> TRON {network}</div>
               <Button onClick={connect} className="focus-ring h-10 rounded-xl border border-violet-300/15 bg-violet-500/10 px-3 text-violet-100 hover:bg-violet-500/20 sm:px-4"><Wallet className="h-4 w-4" /><span className="hidden sm:inline">{account ? compactAccount(account) : "Connect TronLink"}</span><span className="sm:hidden">{account ? compactAccount(account) : "Connect"}</span>{account && <ChevronDown className="h-3.5 w-3.5 opacity-60" />}</Button>
               <button onClick={() => setMenuOpen((value) => !value)} className="focus-ring flex h-10 w-10 items-center justify-center rounded-xl border border-white/[.08] bg-white/[.04] text-zinc-300 md:hidden" aria-expanded={menuOpen} aria-label="Toggle navigation">{menuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}</button>
             </div>
@@ -306,15 +318,15 @@ export function ClientShell({ children, lotteryAddress }: { children: React.Reac
         {children}
         <footer className="mt-24 border-t border-white/[.07] bg-black/10">
           <div className="mx-auto grid max-w-7xl gap-10 px-4 py-12 sm:px-6 md:grid-cols-[1.4fr_1fr_1fr_1fr] lg:px-8">
-            <div><div className="flex items-center gap-2.5"><span className="primary-gradient flex h-8 w-8 items-center justify-center rounded-lg"><Ticket className="h-4 w-4" /></span><span className="display-font font-bold text-white">LottoChain</span></div><p className="mt-4 max-w-xs text-sm leading-6 text-zinc-500">Transparent draws. Verifiable randomness. On-chain USDT settlement.</p><p className="mt-5 text-xs text-zinc-600">TRON Mainnet · USDT (TRC-20) · 18+ only</p></div>
+            <div><div className="flex items-center gap-2.5"><span className="primary-gradient flex h-8 w-8 items-center justify-center rounded-lg"><Ticket className="h-4 w-4" /></span><span className="display-font font-bold text-white">LottoChain</span></div><p className="mt-4 max-w-xs text-sm leading-6 text-zinc-500">Transparent draws. Verifiable randomness. On-chain USDT settlement.</p><p className="mt-5 text-xs text-zinc-600">TRON {network} · USDT (TRC-20) · 18+ only</p></div>
             <FooterGroup title="Product" links={[{ label: "Live draw", href: "/" }, { label: "Draw history", href: "/history" }, { label: "My tickets", href: "/profile" }]} />
-            <FooterGroup title="Security" links={[{ label: "How fairness works", href: "/fairness" }, { label: "Security model", href: "/security" }, { label: "VRF proof", href: "/draws/1042" }]} />
+            <FooterGroup title="Security" links={[{ label: "How fairness works", href: "/fairness" }, { label: "Security model", href: "/security" }, { label: "VRF proofs", href: "/history" }]} />
             <FooterGroup title="Legal" links={[{ label: "Terms & eligibility", href: "/terms" }, { label: "Restricted countries", href: "/terms#restricted" }, { label: "Responsible play", href: "/terms#responsible" }]} />
           </div>
           <div className="border-t border-white/[.06] px-4 py-5 text-center text-xs text-zinc-600">© 2026 LottoChain. Real-money access remains locked until contract, audit, and legal launch gates pass.</div>
         </footer>
       </div>
-      <BuyDialog open={buyOpen} onOpenChange={setBuyOpen} account={account} connect={connect} lotteryAddress={lotteryAddress} isLive={isLive} />
+      <BuyDialog open={buyOpen} onOpenChange={setBuyOpen} account={account} connect={connect} lotteryAddress={lotteryAddress} paymentTokenAddress={paymentTokenAddress} network={network} isLive={isLive} />
       <Toaster position="bottom-right" richColors closeButton />
     </LottoContext.Provider>
   );

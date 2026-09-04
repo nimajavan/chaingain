@@ -1,0 +1,32 @@
+name: Nile draw automation
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "*/10 * * * *"
+permissions:
+  contents: read
+concurrency:
+  group: nile-draw-automation
+  cancel-in-progress: false
+jobs:
+  keeper:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    environment: nile
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: node scripts/tron-automation.mjs
+        env:
+          TRON_NETWORK: nile
+          TRON_FULL_HOST: https://nile.trongrid.io
+          TRON_LOTTERY_ADDRESS: ${{ vars.TRON_LOTTERY_ADDRESS }}
+          TRONGRID_API_KEY: ${{ secrets.TRONGRID_API_KEY }}
+          TRON_AUTOMATION_PRIVATE_KEY: ${{ secrets.TRON_AUTOMATION_PRIVATE_KEY }}
+          AUTOMATION_EXECUTE: "true"
+          AUTOMATION_MIN_TRX: "20"
+          AUTOMATION_FEE_LIMIT_SUN: "150000000"

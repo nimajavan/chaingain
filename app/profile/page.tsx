@@ -1,17 +1,26 @@
 // Connected-wallet profile with aggregate statistics and on-chain ticket stubs.
 "use client";
 
-import Link from "next/link";
-import { Copy, ExternalLink, Sparkles, Ticket, Trophy, Wallet } from "lucide-react";
+import { Copy, Ticket, Wallet } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { useLotto } from "../components/client-shell";
-import { formatUsdt, shortAddress } from "../data";
+import { formatUsdt, loadApi, shortAddress } from "../data";
 
-const ticketNumbers = [1627, 1628, 1629];
+type ProfileData = { purchases: { draw_id: number; quantity: number; amount_atomic: string; transaction_id: string }[];
+  claims: { kind: string; draw_id: number; amount_atomic: string; transaction_id: string }[] };
 
 export default function ProfilePage() {
   const { account, connect, openBuy } = useLotto();
+  const [profile, setProfile] = useState<ProfileData>({ purchases: [], claims: [] });
+  useEffect(() => { if (account) void loadApi<ProfileData>(`/api/profile/${account}`).then((data) => setProfile(data ?? { purchases: [], claims: [] })); }, [account]);
+  const summary = useMemo(() => ({
+    tickets: profile.purchases.reduce((total, item) => total + item.quantity, 0),
+    spent: profile.purchases.reduce((total, item) => total + BigInt(item.amount_atomic), 0n),
+    payouts: profile.claims.filter((item) => item.kind === "payout"),
+    earned: profile.claims.filter((item) => item.kind === "payout").reduce((total, item) => total + BigInt(item.amount_atomic), 0n),
+  }), [profile]);
 
   if (!account) {
     return (
@@ -49,25 +58,21 @@ export default function ProfilePage() {
       </section>
 
       <section className="mt-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <ProfileStat label="Lifetime tickets" value="27" note="Across 9 draws" />
-        <ProfileStat label="Total spent" value={`${formatUsdt(270_000_000n)} USDT`} note="Exact TRC-20 approvals only" />
-        <ProfileStat label="Wins" value="1" note="Draw #1042" highlight />
-        <ProfileStat label="Earnings" value={`${formatUsdt(12_348_000_000n, true)}`} note="Paid on TRON" highlight />
+        <ProfileStat label="Lifetime tickets" value={String(summary.tickets)} note={`${new Set(profile.purchases.map((item) => item.draw_id)).size} indexed draws`} />
+        <ProfileStat label="Total spent" value={`${formatUsdt(summary.spent)} USDT`} note="Confirmed purchases only" />
+        <ProfileStat label="Payout claims" value={String(summary.payouts.length)} note="Confirmed claims" highlight />
+        <ProfileStat label="Claimed" value={`${formatUsdt(summary.earned, true)}`} note="Paid on TRON" highlight />
       </section>
 
       <section className="mt-12" aria-labelledby="tickets-heading">
         <div className="flex flex-wrap items-end justify-between gap-3">
-          <div><p className="text-sm font-semibold uppercase tracking-[.2em] text-violet-400">Active draw #1043</p><h2 id="tickets-heading" className="display-font mt-2 text-3xl font-bold text-white">Your ticket stubs</h2></div>
-          <p className="text-sm text-zinc-500">3 entries · 1 in 1,262 combined odds</p>
+          <div><p className="text-sm font-semibold uppercase tracking-[.2em] text-violet-400">Confirmed history</p><h2 id="tickets-heading" className="display-font mt-2 text-3xl font-bold text-white">Your indexed entries</h2></div>
+          <p className="text-sm text-zinc-500">Derived from finalized TRON events</p>
         </div>
         <div className="mt-6 grid gap-4 lg:grid-cols-3">
-          {ticketNumbers.map((number) => <TicketStub key={number} number={number} owner={account} />)}
+          {profile.purchases.slice(0, 9).map((item) => <article key={item.transaction_id} className="glass rounded-[20px] p-5"><p className="text-xs font-semibold uppercase tracking-wider text-violet-300">Draw #{item.draw_id}</p><p className="display-font mt-3 text-2xl font-semibold text-white">{item.quantity} ticket{item.quantity === 1 ? "" : "s"}</p><p className="mono mt-2 truncate text-xs text-zinc-600">{item.transaction_id}</p></article>)}
+          {!profile.purchases.length && <p className="col-span-full rounded-[20px] border border-white/[.07] p-10 text-center text-zinc-600">No confirmed purchases indexed for this wallet.</p>}
         </div>
-      </section>
-
-      <section className="glass mt-10 flex flex-col gap-5 rounded-[20px] p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
-        <div className="flex items-start gap-3"><span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-400/10 text-amber-300"><Trophy className="h-5 w-5" /></span><div><h2 className="font-semibold text-white">Sample result · Draw #1042</h2><p className="mt-1 text-sm text-zinc-500">Illustrative payout: $12,348 USDT through the TRON contract flow.</p></div></div>
-        <Link href="/draws/1042" className="focus-ring inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border border-white/[.09] bg-white/[.04] px-4 py-2.5 text-sm font-medium text-zinc-300 transition hover:text-white">View proof <ExternalLink className="h-4 w-4" /></Link>
       </section>
     </main>
   );
@@ -75,20 +80,4 @@ export default function ProfilePage() {
 
 function ProfileStat({ label, value, note, highlight = false }: { label: string; value: string; note: string; highlight?: boolean }) {
   return <article className="glass rounded-[18px] p-4 sm:p-5"><p className="text-sm text-zinc-500">{label}</p><p className={`display-font mt-2 text-xl font-semibold sm:text-2xl ${highlight ? "gold-text" : "text-white"}`}>{value}</p><p className="mt-2 text-xs text-zinc-600">{note}</p></article>;
-}
-
-function TicketStub({ number, owner }: { number: number; owner: string }) {
-  return (
-    <article className="ticket-cutout glass glass-hover relative overflow-hidden rounded-[20px]">
-      <div className="grid min-h-48 grid-cols-[1fr_66px]">
-        <div className="p-5 sm:p-6">
-          <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[.18em] text-violet-300"><Sparkles className="h-3.5 w-3.5" /> Draw #1043</div>
-          <p className="display-font mt-6 text-sm uppercase tracking-widest text-zinc-600">Ticket number</p>
-          <p className="display-font gold-text mt-1 text-4xl font-bold">#{number}</p>
-          <div className="mt-5 flex items-end justify-between gap-3"><div><p className="text-[10px] uppercase tracking-wider text-zinc-600">Owner</p><p className="mono mt-1 text-xs text-zinc-400">{shortAddress(owner)}</p></div><div className="barcode h-7 w-20 opacity-40" aria-hidden="true" /></div>
-        </div>
-        <div className="flex items-center justify-center border-l border-dashed border-white/15 bg-white/[.02]"><span className="display-font rotate-90 whitespace-nowrap text-xs font-bold tracking-[.3em] text-zinc-600">LOTTOCHAIN</span></div>
-      </div>
-    </article>
-  );
 }

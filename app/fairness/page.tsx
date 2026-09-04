@@ -39,7 +39,7 @@ export default function FairnessPage() {
         <div className="glass rounded-[22px] p-6"><p className="text-sm font-semibold text-emerald-300">Refund guarantee</p><p className="mt-4 text-sm leading-7 text-zinc-400">If fewer than 500 players enter before the deadline, the contract returns each wallet&apos;s exact spend. The treasury cannot claim an incomplete pool.</p><div className="mt-5 flex items-center gap-2 text-sm font-medium text-emerald-300"><Check className="h-4 w-4" /> Contract-enforced, not support-operated</div></div>
       </section>
 
-      <div className="mt-10 flex justify-center"><Link href="/draws/1042" className="focus-ring primary-gradient primary-glow inline-flex items-center gap-2 rounded-xl px-6 py-3 text-sm font-semibold text-white">Inspect a complete proof <ArrowRight className="h-4 w-4" /></Link></div>
+      <div className="mt-10 flex justify-center"><Link href="/history" className="focus-ring primary-gradient primary-glow inline-flex items-center gap-2 rounded-xl px-6 py-3 text-sm font-semibold text-white">Inspect finalized proofs <ArrowRight className="h-4 w-4" /></Link></div>
     </main>
   );
 }

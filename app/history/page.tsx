@@ -3,7 +3,7 @@
 
 import Link from "next/link";
 import { ArrowUpRight, Check, Search, Trophy } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Table,
   TableBody,
@@ -12,15 +12,17 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { drawHistory, formatUsdt, shortAddress } from "../data";
+import { formatUsdt, loadApi, shortAddress, type IndexedDraw } from "../data";
 import { useLotto } from "../components/client-shell";
 
 export default function HistoryPage() {
   const { account } = useLotto();
   const [query, setQuery] = useState("");
-  const filteredDraws = useMemo(() => drawHistory.filter((draw) => draw.winner.toLowerCase().includes(query.trim().toLowerCase())), [query]);
-  const totalPaid = drawHistory.reduce((total, draw) => total + draw.prize, 0n);
-  const totalTickets = drawHistory.reduce((total, draw) => total + draw.tickets, 0);
+  const [draws, setDraws] = useState<IndexedDraw[]>([]);
+  useEffect(() => { void loadApi<IndexedDraw[]>("/api/draws").then((data) => setDraws(data ?? [])); }, []);
+  const filteredDraws = useMemo(() => draws.filter((draw) => (draw.winner ?? "").toLowerCase().includes(query.trim().toLowerCase())), [draws, query]);
+  const totalPaid = draws.reduce((total, draw) => total + BigInt(draw.winner_payout_atomic ?? "0"), 0n);
+  const totalTickets = draws.reduce((total, draw) => total + draw.total_tickets, 0);
 
   return (
     <main className="mx-auto min-h-[70vh] max-w-7xl px-4 pb-8 pt-12 sm:px-6 lg:px-8">
@@ -39,7 +41,7 @@ export default function HistoryPage() {
 
       <section className="mt-8 grid gap-4 sm:grid-cols-3">
         <Summary label="Total paid to winners" value={`${formatUsdt(totalPaid, true)} USDT`} />
-        <Summary label="Completed draws" value={String(drawHistory.length)} />
+        <Summary label="Completed draws" value={String(draws.length)} />
         <Summary label="Tickets indexed" value={totalTickets.toLocaleString("en-US")} />
       </section>
 
@@ -59,26 +61,27 @@ export default function HistoryPage() {
             </TableHeader>
             <TableBody>
               {filteredDraws.map((draw) => {
-                const isYou = account?.toLowerCase() === draw.winner.toLowerCase();
+                const winner = draw.winner ?? "";
+                const isYou = account?.toLowerCase() === winner.toLowerCase();
                 return (
-                  <TableRow key={draw.id} className="border-white/[.06] hover:bg-white/[.025]">
-                    <TableCell className="display-font px-5 py-5 font-semibold text-white">#{draw.id}</TableCell>
-                    <TableCell className="hidden py-5 text-zinc-500 sm:table-cell">{draw.date}</TableCell>
-                    <TableCell className="py-5"><div className="flex items-center gap-2"><span className="mono text-xs text-zinc-300 sm:text-sm">{shortAddress(draw.winner)}</span>{isYou && <span className="rounded-md bg-amber-400/10 px-1.5 py-0.5 text-[10px] font-bold text-amber-300">YOU</span>}</div></TableCell>
-                    <TableCell className="display-font py-5 font-semibold text-amber-300">${formatUsdt(draw.prize)}</TableCell>
-                    <TableCell className="hidden py-5 text-zinc-500 lg:table-cell">{draw.tickets.toLocaleString("en-US")}</TableCell>
+                  <TableRow key={draw.draw_id} className="border-white/[.06] hover:bg-white/[.025]">
+                    <TableCell className="display-font px-5 py-5 font-semibold text-white">#{draw.draw_id}</TableCell>
+                    <TableCell className="hidden py-5 text-zinc-500 sm:table-cell">{draw.closes_at ? new Date(draw.closes_at * 1000).toLocaleDateString("en-US") : "—"}</TableCell>
+                    <TableCell className="py-5"><div className="flex items-center gap-2"><span className="mono text-xs text-zinc-300 sm:text-sm">{shortAddress(winner)}</span>{isYou && <span className="rounded-md bg-amber-400/10 px-1.5 py-0.5 text-[10px] font-bold text-amber-300">YOU</span>}</div></TableCell>
+                    <TableCell className="display-font py-5 font-semibold text-amber-300">${formatUsdt(BigInt(draw.winner_payout_atomic ?? "0"))}</TableCell>
+                    <TableCell className="hidden py-5 text-zinc-500 lg:table-cell">{draw.total_tickets.toLocaleString("en-US")}</TableCell>
                     <TableCell className="hidden py-5 md:table-cell"><span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-400/15 bg-emerald-400/[.06] px-2.5 py-1 text-xs font-medium text-emerald-300"><Check className="h-3.5 w-3.5" /> VRF verified</span></TableCell>
-                    <TableCell className="pr-5 text-right"><Link href={`/draws/${draw.id}`} className="focus-ring inline-flex h-9 w-9 items-center justify-center rounded-lg text-zinc-500 transition hover:bg-white/[.06] hover:text-white" aria-label={`View Draw ${draw.id}`}><ArrowUpRight className="h-4 w-4" /></Link></TableCell>
+                    <TableCell className="pr-5 text-right"><Link href={`/draws/${draw.draw_id}`} className="focus-ring inline-flex h-9 w-9 items-center justify-center rounded-lg text-zinc-500 transition hover:bg-white/[.06] hover:text-white" aria-label={`View Draw ${draw.draw_id}`}><ArrowUpRight className="h-4 w-4" /></Link></TableCell>
                   </TableRow>
                 );
               })}
             </TableBody>
           </Table>
         ) : (
-          <div className="px-6 py-20 text-center"><Trophy className="mx-auto h-8 w-8 text-zinc-700" /><h2 className="display-font mt-4 text-lg font-semibold text-zinc-300">No matching winner</h2><p className="mt-2 text-sm text-zinc-600">Try the full wallet address or a shorter fragment.</p></div>
+          <div className="px-6 py-20 text-center"><Trophy className="mx-auto h-8 w-8 text-zinc-700" /><h2 className="display-font mt-4 text-lg font-semibold text-zinc-300">No finalized draws indexed</h2><p className="mt-2 text-sm text-zinc-600">Results appear only after confirmed TRON events are indexed.</p></div>
         )}
       </section>
-      <p className="mt-4 text-center text-xs text-zinc-600">Sample records remain clearly separated until the TRON Mainnet contract is deployed and indexed.</p>
+      <p className="mt-4 text-center text-xs text-zinc-600">Only confirmed TRON events are included.</p>
     </main>
   );
 }
