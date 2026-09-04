@@ -4,6 +4,8 @@ This directory contains the first auditable contract slice for the TRON lottery.
 
 The current internal review and unresolved Mainnet gates are documented in
 [`docs/security-audit-2026-09-04.md`](../docs/security-audit-2026-09-04.md).
+The native TRON 2-of-3 admin and treasury procedure is documented in
+[`docs/multisig-runbook.md`](../docs/multisig-runbook.md).
 
 ## Safety status
 

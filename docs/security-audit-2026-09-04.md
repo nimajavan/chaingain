@@ -55,12 +55,18 @@ to `Refundable`. Each participant can then recover their exact contribution.
 Purchases compare the contract balance before and after `transferFrom`. Transfers
 that deliver anything other than the exact ticket cost revert.
 
-### CG-04 — Medium — Privileged key compromise — Mitigated, launch blocker
+### CG-04 — Medium — Privileged key compromise — Tooling complete, activation pending
 
 The code uses a two-step administrator transfer and separates the oracle address
 from the administrator. Production must assign `admin` and `treasury` to reviewed
 TRON multisig permissions with thresholds greater than one. An externally owned
-single-key account is not acceptable for Mainnet.
+single-key account is not acceptable for Mainnet. The repository now includes
+validated 2-of-3 admin and treasury policy templates, a restricted contract-call
+permission bitmap, unsigned transaction construction, on-chain drift inspection,
+and a custody/rotation drill in `docs/multisig-runbook.md`. Actual network
+activation remains blocked until the account and signer addresses are supplied.
+Unsigned `AccountPermissionUpdateContract` construction was successfully checked
+against the Nile FullNode API without signing or broadcasting a transaction.
 
 ### CG-05 — High — Production randomness adapter is absent — Open, launch blocker
 

@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "network": "nile",
+  "role": "admin",
+  "nodeUrl": "https://nile.trongrid.io",
+  "accountAddress": "T_REPLACE_ADMIN_ACCOUNT",
+  "ownerPermission": {
+    "name": "chaingain-admin-owner",
+    "threshold": 2,
+    "keys": [
+      { "address": "T_REPLACE_ADMIN_SIGNER_1", "weight": 1 },
+      { "address": "T_REPLACE_ADMIN_SIGNER_2", "weight": 1 },
+      { "address": "T_REPLACE_ADMIN_SIGNER_3", "weight": 1 }
+    ]
+  },
+  "activePermissions": [
+    {
+      "name": "chaingain-admin-contracts",
+      "threshold": 2,
+      "operations": ["TriggerSmartContract"],
+      "keys": [
+        { "address": "T_REPLACE_ADMIN_SIGNER_1", "weight": 1 },
+        { "address": "T_REPLACE_ADMIN_SIGNER_2", "weight": 1 },
+        { "address": "T_REPLACE_ADMIN_SIGNER_3", "weight": 1 }
+      ]
+    }
+  ]
+}
