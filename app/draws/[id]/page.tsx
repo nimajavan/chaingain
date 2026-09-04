@@ -6,7 +6,7 @@ import { useParams } from "next/navigation";
 import { ArrowLeft, Check, Copy, ExternalLink, ShieldCheck, Trophy } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { drawHistory, formatUsdc, shortAddress, TREASURY_BPS } from "../../data";
+import { drawHistory, formatUsdt, shortAddress, TREASURY_BPS } from "../../data";
 import { useLotto } from "../../components/client-shell";
 
 const confettiColors = ["#F59E0B", "#A855F7", "#10B981", "#FDE68A", "#7C3AED"];
@@ -45,29 +45,29 @@ export default function DrawResultPage() {
             <button onClick={() => copy(draw.winner, "Winner address")} className="focus-ring rounded-lg p-1.5 text-zinc-500 transition hover:bg-white/[.06] hover:text-white" aria-label="Copy winner address"><Copy className="h-4 w-4" /></button>
           </div>
           <p className="mt-8 text-sm uppercase tracking-[.16em] text-zinc-600">Winner payout</p>
-          <p className="display-font gold-text mt-2 text-5xl font-bold tracking-tight sm:text-7xl">${formatUsdc(draw.prize)}</p>
-          <p className="mono mt-2 text-sm text-zinc-500">{formatUsdc(draw.prize)} USDC</p>
+          <p className="display-font gold-text mt-2 text-5xl font-bold tracking-tight sm:text-7xl">${formatUsdt(draw.prize)}</p>
+          <p className="mono mt-2 text-sm text-zinc-500">{formatUsdt(draw.prize)} USDT</p>
         </section>
 
         <section className="glass mt-12 rounded-[24px] p-5 sm:p-7">
-          <div className="flex flex-wrap items-end justify-between gap-3"><div><p className="text-sm text-zinc-500">Contract-enforced payout</p><h2 className="display-font mt-1 text-2xl font-semibold text-white">70 / 30 split</h2></div><p className="mono text-sm text-zinc-500">Total pool: {formatUsdc(total)} USDC</p></div>
+          <div className="flex flex-wrap items-end justify-between gap-3"><div><p className="text-sm text-zinc-500">Contract-enforced payout</p><h2 className="display-font mt-1 text-2xl font-semibold text-white">70 / 30 split</h2></div><p className="mono text-sm text-zinc-500">Total pool: {formatUsdt(total)} USDT</p></div>
           <div className="mt-6 flex h-4 overflow-hidden rounded-full bg-white/[.05]"><div className="w-[70%] bg-gradient-to-r from-amber-500 to-amber-300" /><div className="w-[30%] bg-gradient-to-r from-violet-600 to-fuchsia-500" /></div>
           <div className="mt-5 grid gap-3 sm:grid-cols-2">
-            <SplitCard color="amber" label="Winner · 70%" value={`${formatUsdc(draw.prize)} USDC`} />
-            <SplitCard color="violet" label="Treasury · 30%" value={`${formatUsdc(treasury)} USDC`} />
+            <SplitCard color="amber" label="Winner · 70%" value={`${formatUsdt(draw.prize)} USDT`} />
+            <SplitCard color="violet" label="Treasury · 30%" value={`${formatUsdt(treasury)} USDT`} />
           </div>
         </section>
 
         <section className="glass mt-5 rounded-[24px] p-5 sm:p-7" aria-labelledby="proof-heading">
           <div className="flex items-start gap-4">
             <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-400/10 text-emerald-400"><ShieldCheck className="h-6 w-6" /></span>
-            <div><div className="flex flex-wrap items-center gap-2"><h2 id="proof-heading" className="display-font text-xl font-semibold text-white">Chainlink VRF proof</h2><span className="inline-flex items-center gap-1 rounded-full bg-emerald-400/[.08] px-2 py-1 text-xs font-semibold text-emerald-300"><Check className="h-3 w-3" /> Verified on-chain</span></div><p className="mt-2 text-sm leading-6 text-zinc-500">The returned random word maps deterministically to the winning ticket index.</p></div>
+            <div><div className="flex flex-wrap items-center gap-2"><h2 id="proof-heading" className="display-font text-xl font-semibold text-white">WINkLink VRF proof</h2><span className="inline-flex items-center gap-1 rounded-full bg-emerald-400/[.08] px-2 py-1 text-xs font-semibold text-emerald-300"><Check className="h-3 w-3" /> Verifiable on TRON</span></div><p className="mt-2 text-sm leading-6 text-zinc-500">The returned random word maps deterministically to the winning ticket index.</p></div>
           </div>
           <dl className="mt-6 space-y-3">
             <ProofRow label="Random word" value={draw.randomWord} onCopy={() => copy(draw.randomWord, "Random word")} />
             <ProofRow label="Fulfillment tx" value={draw.txHash} onCopy={() => copy(draw.txHash, "Transaction hash")} />
           </dl>
-          <p className="mt-4 rounded-xl bg-amber-400/[.06] px-4 py-3 text-xs leading-5 text-amber-100/60">Preview evidence is illustrative. Explorer links activate after the Amoy contracts and Chainlink subscription are deployed.</p>
+          <p className="mt-4 rounded-xl bg-amber-400/[.06] px-4 py-3 text-xs leading-5 text-amber-100/60">Sample evidence is illustrative. Explorer links activate after the audited TRON contract and WINkLink consumer are deployed.</p>
         </section>
 
         <div className="mt-7 flex flex-col justify-center gap-3 sm:flex-row">

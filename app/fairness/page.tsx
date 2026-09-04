@@ -13,7 +13,7 @@ export default function FairnessPage() {
 
       <section className="mt-14 grid gap-4 md:grid-cols-3">
         <Principle icon={<Blocks />} title="Chain is the ledger" body="Ticket indices and pool amounts come from confirmed contract events. The application cannot invent financial state." />
-        <Principle icon={<Cpu />} title="VRF is the selector" body="Chainlink VRF supplies the only random value used to choose a winning ticket. Block data and local randomness are never used." />
+        <Principle icon={<Cpu />} title="VRF is the selector" body="WINkLink VRF supplies the only random value used to choose a winning ticket on TRON. Local randomness is never used." />
         <Principle icon={<LockKeyhole />} title="Split cannot move" body="70% to the winner and 30% to the multisig treasury are hard-coded constants, unavailable to owner controls." />
       </section>
 

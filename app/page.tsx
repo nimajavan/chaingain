@@ -22,12 +22,12 @@ import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { useLotto } from "./components/client-shell";
-import { DEMO_CONTRACT, formatUsdc, recentActivity, shortAddress, TICKET_PRICE } from "./data";
+import { formatUsdt, LOTTERY_CONTRACT_PENDING, recentActivity, shortAddress, TICKET_PRICE, TRON_USDT_ADDRESS } from "./data";
 
 const targetPrize = 17_640_000_000n;
 
 export default function Home() {
-  const { account, openBuy } = useLotto();
+  const { account, openBuy, isLive } = useLotto();
   const [prize, setPrize] = useState(0n);
   const [countdown, setCountdown] = useState({ days: 1, hours: 8, minutes: 42, seconds: 19 });
   const deadlineRef = useRef(0);
@@ -64,11 +64,11 @@ export default function Home() {
     <main>
       <div className="mx-auto max-w-7xl px-4 pb-8 pt-10 sm:px-6 sm:pt-14 lg:px-8 lg:pt-16">
         <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-2 rounded-full border border-emerald-400/15 bg-emerald-400/[.06] px-3 py-1.5 text-sm font-medium text-emerald-300">
-            <span className="live-dot h-2 w-2 rounded-full bg-emerald-400" /> Draw #1043 · Open
+          <div className={`flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm font-medium ${isLive ? "border-emerald-400/15 bg-emerald-400/[.06] text-emerald-300" : "border-amber-400/15 bg-amber-400/[.06] text-amber-300"}`}>
+            <span className={`h-2 w-2 rounded-full ${isLive ? "live-dot bg-emerald-400" : "bg-amber-400"}`} /> {isLive ? "TRON Mainnet contract configured" : "Production launch gate"}
           </div>
-          <div className="flex items-center gap-2 rounded-full border border-amber-300/15 bg-amber-300/[.05] px-3 py-1.5 text-xs font-medium text-amber-200/80">
-            <Sparkles className="h-3.5 w-3.5" /> Interactive testnet preview
+          <div className="flex items-center gap-2 rounded-full border border-emerald-300/15 bg-emerald-300/[.05] px-3 py-1.5 text-xs font-medium text-emerald-200/80">
+            <CircleDollarSign className="h-3.5 w-3.5" /> USDT only · TRON Mainnet
           </div>
         </div>
 
@@ -76,11 +76,11 @@ export default function Home() {
           <div className="glass relative overflow-hidden rounded-[26px] p-5 sm:p-8 lg:p-10">
             <div className="absolute -right-24 -top-24 h-72 w-72 rounded-full bg-amber-400/[.07] blur-3xl" />
             <div className="relative">
-              <p className="text-sm font-medium uppercase tracking-[.2em] text-zinc-500">Current prize pool</p>
+              <p className="text-sm font-medium uppercase tracking-[.2em] text-zinc-500">Illustrative launch pool</p>
               <div className="prize-bump display-font gold-text mt-3 text-[clamp(3.25rem,9vw,6.75rem)] font-bold leading-none tracking-[-.055em]" aria-live="polite">
-                ${formatUsdc(prize)}
+                ${formatUsdt(prize)}
               </div>
-              <p className="mono mt-3 text-sm text-zinc-500">{formatUsdc(prize)} USDC · 70% winner payout</p>
+              <p className="mono mt-3 text-sm text-zinc-500">{formatUsdt(prize)} USDT · sample display, not a live balance</p>
 
               <div className="mt-8">
                 <div className="mb-3 flex items-center gap-2 text-sm font-medium text-zinc-300"><Clock3 className="h-4 w-4 text-violet-400" /> Draw closes in</div>
@@ -94,7 +94,7 @@ export default function Home() {
 
               <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
                 <Button onClick={openBuy} className="primary-gradient primary-glow h-13 rounded-xl px-7 text-base font-semibold hover:brightness-110 sm:min-w-60">
-                  <Ticket className="h-5 w-5" /> Buy Ticket — {formatUsdc(TICKET_PRICE)} USDC
+                  <Ticket className="h-5 w-5" /> Buy Ticket — {formatUsdt(TICKET_PRICE)} USDT
                 </Button>
                 <Link href="/fairness" className="focus-ring flex h-12 items-center justify-center gap-2 rounded-xl px-5 text-sm font-medium text-zinc-400 transition hover:bg-white/[.04] hover:text-zinc-100">
                   Verify the draw <ArrowRight className="h-4 w-4" />
@@ -113,7 +113,7 @@ export default function Home() {
             <div className="flex items-center justify-between">
               <div>
                 <div className="flex items-center gap-2"><Activity className="h-4 w-4 text-violet-400" /><h2 id="activity-heading" className="display-font font-semibold text-white">Live activity</h2></div>
-                <p className="mt-1 text-xs text-zinc-500">Confirmed ticket purchases</p>
+                <p className="mt-1 text-xs text-zinc-500">Sample TRON event stream</p>
               </div>
               <RefreshCw className="h-4 w-4 text-zinc-600" />
             </div>
@@ -154,8 +154,8 @@ export default function Home() {
           </div>
           <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <StepCard number="01" icon={<Wallet />} title="Connect" body="Use your wallet. No email, password, or custodial account." />
-            <StepCard number="02" icon={<Ticket />} title="Buy tickets" body="Approve the exact USDC total, then enter the active draw." />
-            <StepCard number="03" icon={<Sparkles />} title="VRF selects" body="Chainlink delivers randomness that anyone can verify on-chain." />
+            <StepCard number="02" icon={<Ticket />} title="Buy tickets" body="Approve the exact USDT total on TRON, then enter the active draw." />
+            <StepCard number="03" icon={<Sparkles />} title="VRF selects" body="WINkLink delivers randomness that anyone can verify on TRON." />
             <StepCard number="04" icon={<CircleDollarSign />} title="Contract pays" body="70% moves to the winner and 30% to the treasury automatically." />
           </div>
         </section>
@@ -165,16 +165,17 @@ export default function Home() {
           <div className="relative flex flex-col gap-7 md:flex-row md:items-center md:justify-between">
             <div className="flex max-w-2xl items-start gap-4">
               <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-emerald-400/10 text-emerald-400"><LockKeyhole className="h-6 w-6" /></span>
-              <div><p className="flex items-center gap-2 text-sm font-semibold text-emerald-300"><Check className="h-4 w-4" /> Provably fair by design</p><h2 className="display-font mt-2 text-2xl font-semibold text-white">Don&apos;t trust a promise. Verify the proof.</h2><p className="mt-2 text-sm leading-6 text-zinc-400">Winner selection comes only from Chainlink VRF. The 70/30 split is hard-coded, and the application never takes custody of funds.</p></div>
+              <div><p className="flex items-center gap-2 text-sm font-semibold text-emerald-300"><Check className="h-4 w-4" /> Provably fair by design</p><h2 className="display-font mt-2 text-2xl font-semibold text-white">Don&apos;t trust a promise. Verify the proof.</h2><p className="mt-2 text-sm leading-6 text-zinc-400">Winner selection comes from WINkLink VRF. The 70/30 split is hard-coded, and the application never takes custody of funds.</p></div>
             </div>
             <Link href="/draws/1042" className="focus-ring flex shrink-0 items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[.05] px-5 py-3 text-sm font-semibold text-white transition hover:border-violet-400/30 hover:bg-white/[.08]">Inspect last proof <ExternalLink className="h-4 w-4" /></Link>
           </div>
         </section>
 
         <div className="mt-6 flex flex-wrap items-center justify-center gap-x-8 gap-y-3 text-xs text-zinc-600">
-          <span className="flex items-center gap-2"><ShieldCheck className="h-4 w-4" /> Chainlink VRF v2.5</span>
-          <span className="flex items-center gap-2"><Blocks className="h-4 w-4" /> Polygon Amoy</span>
-          <span className="mono flex items-center gap-2"><LockKeyhole className="h-4 w-4" /> Contract: {shortAddress(DEMO_CONTRACT)}</span>
+          <span className="flex items-center gap-2"><ShieldCheck className="h-4 w-4" /> WINkLink VRF</span>
+          <span className="flex items-center gap-2"><Blocks className="h-4 w-4" /> TRON Mainnet</span>
+          <span className="mono flex items-center gap-2"><CircleDollarSign className="h-4 w-4" /> USDT: {shortAddress(TRON_USDT_ADDRESS)}</span>
+          <span className="mono flex items-center gap-2"><LockKeyhole className="h-4 w-4" /> Lottery: {shortAddress(LOTTERY_CONTRACT_PENDING)}</span>
         </div>
       </div>
     </main>

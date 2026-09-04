@@ -6,7 +6,7 @@ import { Copy, ExternalLink, Sparkles, Ticket, Trophy, Wallet } from "lucide-rea
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { useLotto } from "../components/client-shell";
-import { formatUsdc, shortAddress } from "../data";
+import { formatUsdt, shortAddress } from "../data";
 
 const ticketNumbers = [1627, 1628, 1629];
 
@@ -40,7 +40,7 @@ export default function ProfilePage() {
           <div className="flex items-center gap-4">
             <div className="h-16 w-16 shrink-0 rounded-2xl border border-white/15 shadow-xl" style={{ background: `linear-gradient(135deg,hsl(${hue} 72% 56%),hsl(${(hue + 78) % 360} 82% 45%))` }} />
             <div>
-              <p className="text-sm font-medium text-violet-300">Connected on Polygon Amoy</p>
+              <p className="text-sm font-medium text-violet-300">Connected through TronLink</p>
               <div className="mt-1 flex items-center gap-2"><h1 className="mono text-lg font-semibold text-white sm:text-xl">{shortAddress(account)}</h1><button onClick={copyAddress} className="focus-ring rounded-lg p-1.5 text-zinc-500 transition hover:bg-white/[.05] hover:text-white" aria-label="Copy wallet address"><Copy className="h-4 w-4" /></button></div>
             </div>
           </div>
@@ -50,9 +50,9 @@ export default function ProfilePage() {
 
       <section className="mt-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
         <ProfileStat label="Lifetime tickets" value="27" note="Across 9 draws" />
-        <ProfileStat label="Total spent" value={`${formatUsdc(270_000_000n)} USDC`} note="Exact approvals only" />
+        <ProfileStat label="Total spent" value={`${formatUsdt(270_000_000n)} USDT`} note="Exact TRC-20 approvals only" />
         <ProfileStat label="Wins" value="1" note="Draw #1042" highlight />
-        <ProfileStat label="Earnings" value={`${formatUsdc(12_348_000_000n, true)}`} note="Paid on-chain" highlight />
+        <ProfileStat label="Earnings" value={`${formatUsdt(12_348_000_000n, true)}`} note="Paid on TRON" highlight />
       </section>
 
       <section className="mt-12" aria-labelledby="tickets-heading">
@@ -66,7 +66,7 @@ export default function ProfilePage() {
       </section>
 
       <section className="glass mt-10 flex flex-col gap-5 rounded-[20px] p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
-        <div className="flex items-start gap-3"><span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-400/10 text-amber-300"><Trophy className="h-5 w-5" /></span><div><h2 className="font-semibold text-white">Previous winner · Draw #1042</h2><p className="mt-1 text-sm text-zinc-500">Your demo wallet received $12,348 USDC through the contract payout flow.</p></div></div>
+        <div className="flex items-start gap-3"><span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-400/10 text-amber-300"><Trophy className="h-5 w-5" /></span><div><h2 className="font-semibold text-white">Sample result · Draw #1042</h2><p className="mt-1 text-sm text-zinc-500">Illustrative payout: $12,348 USDT through the TRON contract flow.</p></div></div>
         <Link href="/draws/1042" className="focus-ring inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border border-white/[.09] bg-white/[.04] px-4 py-2.5 text-sm font-medium text-zinc-300 transition hover:text-white">View proof <ExternalLink className="h-4 w-4" /></Link>
       </section>
     </main>
