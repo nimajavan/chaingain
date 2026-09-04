@@ -10,15 +10,27 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
         with:
           node-version: 24
           cache: npm
       - run: npm ci --ignore-scripts
       - run: npm run typecheck
       - run: npm run lint
-      - run: npm run contracts:compile
+      - name: Compile contracts
+        shell: bash
+        run: |
+          set -o pipefail
+          npm run contracts:compile 2>&1 | tee contracts-compile.log
+          status=${PIPESTATUS[0]}
+          {
+            echo '### Solidity compile output'
+            echo '```text'
+            tail -n 120 contracts-compile.log
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          exit "$status"
       - run: npm run contracts:test
       - run: npm run test
       - run: npm audit --omit=dev --audit-level=high
