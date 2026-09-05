@@ -1,0 +1,21 @@
+[Unit]
+Description=ChainGain confirmed-event indexer
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=chaingain
+Group=chaingain
+WorkingDirectory=/opt/chaingain/app
+Environment=NODE_ENV=production
+EnvironmentFile=/etc/chaingain/indexer.env
+ExecStart=/usr/local/bin/chaingain-node dist/services/server/cli.js index
+TimeoutStartSec=15min
+UMask=0027
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/chaingain
+RestrictSUIDSGID=true

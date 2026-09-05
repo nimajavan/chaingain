@@ -1,0 +1,14 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "noEmit": false,
+    "incremental": false,
+    "outDir": "dist/services",
+    "rootDir": ".",
+    "allowJs": false
+  },
+  "include": ["server/**/*.ts", "worker/api.ts", "worker/indexer.ts"],
+  "exclude": ["node_modules", "dist"]
+}

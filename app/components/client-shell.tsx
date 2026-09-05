@@ -269,10 +269,12 @@ export function ClientShell({ children, lotteryAddress, paymentTokenAddress, net
 
   useEffect(() => {
     let active = true;
-    fetch("/api/health", { cache: "no-store" }).then((response) => response.json()).then((health: { status?: string; network?: string; contractAddress?: string }) => {
-      if (active) setIsLive(health.status === "ready" && health.network === network && health.contractAddress === lotteryAddress && /^T[1-9A-HJ-NP-Za-km-z]{33}$/.test(paymentTokenAddress));
+    const refresh = () => fetch("/api/health", { cache: "no-store", signal: AbortSignal.timeout(10_000) }).then((response) => response.json()).then((health: { status?: string; salesEnabled?: boolean; network?: string; contractAddress?: string }) => {
+      if (active) setIsLive(health.salesEnabled === true && health.status === "ready" && health.network === network && health.contractAddress === lotteryAddress && /^T[1-9A-HJ-NP-Za-km-z]{33}$/.test(paymentTokenAddress));
     }).catch(() => { if (active) setIsLive(false); });
-    return () => { active = false; };
+    void refresh();
+    const timer = setInterval(refresh, 30_000);
+    return () => { active = false; clearInterval(timer); };
   }, [lotteryAddress, network, paymentTokenAddress]);
 
   const connect = useCallback(async () => {

@@ -1,0 +1,11 @@
+[Unit]
+Description=Run ChainGain keeper without overlapping invocations
+
+[Timer]
+OnBootSec=1min
+OnUnitInactiveSec=1min
+AccuracySec=5s
+Unit=chaingain-keeper.service
+
+[Install]
+WantedBy=timers.target

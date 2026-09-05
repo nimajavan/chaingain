@@ -3,6 +3,9 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { ClientShell } from "./components/client-shell";
 
+// Read public chain configuration at request time, not from the build machine.
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: { default: "LottoChain — Provably fair on-chain draws", template: "%s · LottoChain" },
   description: "A transparent on-chain lottery using USDT on TRON and verifiable WINkLink randomness.",

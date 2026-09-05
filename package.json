@@ -3,15 +3,21 @@
   "version": "0.1.0",
   "private": true,
   "engines": {
-    "node": ">=22.13.0"
+    "node": ">=24.13.0 <25"
   },
   "scripts": {
     "install:ci": "bash scripts/install-ci.sh",
-    "dev": "WRANGLER_LOG_PATH=.wrangler/wrangler.log vite",
-    "build": "bash scripts/build-verified.sh",
-    "start": "WRANGLER_LOG_PATH=.wrangler/wrangler.log vinext start",
+    "dev": "next dev --hostname 127.0.0.1",
+    "build": "next build --webpack && npm run build:services",
+    "build:services": "tsc -p tsconfig.services.json",
+    "start": "next start --hostname 127.0.0.1",
     "test": "npm run build && node --test tests/*.test.mjs",
-    "lint": "bash scripts/sites-env.sh -- eslint . --ignore-pattern dist --ignore-pattern .next",
+    "test:services": "npm run build:services && node --test tests/linux-services.test.mjs",
+    "db:migrate": "node dist/services/server/cli.js migrate",
+    "db:backup": "node dist/services/server/cli.js backup",
+    "indexer:once": "node dist/services/server/cli.js index",
+    "automation:check": "node scripts/tron-automation.mjs",
+    "lint": "eslint . --ignore-pattern dist --ignore-pattern .next",
     "typecheck": "tsc --noEmit",
     "db:generate": "bash scripts/sites-env.sh -- drizzle-kit generate",
     "contracts:compile": "hardhat compile",

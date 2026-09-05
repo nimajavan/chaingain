@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 import { TronWeb } from "tronweb";
+import { pathToFileURL } from "node:url";
+import { resolve } from "node:path";
 
 const NETWORKS = {
   nile: "https://nile.trongrid.io",
@@ -42,9 +44,11 @@ export async function runAutomation() {
   const privateKey = process.env.TRON_AUTOMATION_PRIVATE_KEY?.trim();
   if (execute && !privateKey) throw new Error("TRON_AUTOMATION_PRIVATE_KEY is required when AUTOMATION_EXECUTE=true");
   const fullHost = process.env.TRON_FULL_HOST?.trim() || NETWORKS[network];
+  if (fullHost.replace(/\/$/, "") !== NETWORKS[network]) throw new Error("TRON_FULL_HOST does not match selected network");
   const headers = process.env.TRONGRID_API_KEY ? { "TRON-PRO-API-KEY": process.env.TRONGRID_API_KEY } : undefined;
   const tronWeb = new TronWeb({ fullHost, privateKey, headers });
   if (!TronWeb.isAddress(contractAddress)) throw new Error("TRON_LOTTERY_ADDRESS is invalid");
+  if (!privateKey) tronWeb.setAddress(contractAddress); // read-only calls need an owner address, not a signing key
   const contract = tronWeb.contract(ABI, contractAddress);
   const drawId = BigInt((await contract.currentDrawId().call()).toString());
   if (drawId === 0n) return { status: "idle", reason: "no_draw" };
@@ -62,7 +66,7 @@ export async function runAutomation() {
   return { status: "submitted", network, drawId: drawId.toString(), action, transactionId };
 }
 
-if (import.meta.url === `file://${process.argv[1]?.replace(/\\/g, "/")}`) {
+if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
   runAutomation().then((result) => console.log(JSON.stringify(result))).catch((error) => {
     console.error(error instanceof Error ? error.message : String(error));
     process.exitCode = 1;

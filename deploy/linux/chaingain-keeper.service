@@ -1,0 +1,19 @@
+[Unit]
+Description=ChainGain restricted draw keeper (dry-run by default)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=chaingain-keeper
+Group=chaingain-keeper
+WorkingDirectory=/opt/chaingain/app
+EnvironmentFile=/etc/chaingain/keeper.env
+ExecStart=/usr/local/bin/chaingain-node scripts/tron-automation.mjs
+TimeoutStartSec=3min
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+RestrictSUIDSGID=true

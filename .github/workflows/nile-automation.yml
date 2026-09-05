@@ -10,6 +10,8 @@ concurrency:
   cancel-in-progress: false
 jobs:
   keeper:
+    # VPS is the default keeper. Opt in explicitly to avoid duplicate senders.
+    if: vars.ENABLE_GITHUB_KEEPER == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     environment: nile
@@ -27,6 +29,6 @@ jobs:
           TRON_LOTTERY_ADDRESS: ${{ vars.TRON_LOTTERY_ADDRESS }}
           TRONGRID_API_KEY: ${{ secrets.TRONGRID_API_KEY }}
           TRON_AUTOMATION_PRIVATE_KEY: ${{ secrets.TRON_AUTOMATION_PRIVATE_KEY }}
-          AUTOMATION_EXECUTE: "true"
+          AUTOMATION_EXECUTE: ${{ vars.AUTOMATION_EXECUTE || 'false' }}
           AUTOMATION_MIN_TRX: "20"
           AUTOMATION_FEE_LIMIT_SUN: "150000000"

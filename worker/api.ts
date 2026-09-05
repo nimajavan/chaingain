@@ -1,4 +1,4 @@
-import { validateIndexerConfig, type IndexerEnv } from "./indexer";
+import { validateIndexerConfig, type IndexerEnv } from "./indexer.js";
 
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: {
   "content-type": "application/json; charset=utf-8", "cache-control": "no-store", "x-content-type-options": "nosniff" } });
@@ -8,9 +8,15 @@ export async function handleApi(request: Request, env: IndexerEnv): Promise<Resp
   if (!url.pathname.startsWith("/api/")) return null;
   if (request.method !== "GET") return json({ error: "method_not_allowed" }, 405);
   const config = validateIndexerConfig(env);
+  if (config.ready) {
+    const identity = await env.DB.prepare("SELECT value FROM indexer_state WHERE key='chain_identity'").first<{ value: string }>();
+    if (!identity || identity.value !== `${config.network}:${config.address}`) return json({ status: "syncing", salesEnabled: false, reason: "Indexer identity not initialized or mismatched" }, 503);
+  }
   if (url.pathname === "/api/health") {
     const last = await env.DB.prepare("SELECT value FROM indexer_state WHERE key='last_success_at'").first<{ value: string }>();
-    return json({ status: config.ready ? "ready" : "prelaunch", network: config.ready ? config.network : null,
+    const cursor = await env.DB.prepare("SELECT value FROM indexer_state WHERE key='page_cursor'").first();
+    const fresh = !cursor && !!last && Number(last.value) <= Date.now() && Date.now() - Number(last.value) < 300_000;
+    return json({ status: config.ready ? (fresh ? "ready" : "syncing") : "prelaunch", salesEnabled: env.SALES_ENABLED === "true" && fresh && config.ready, network: config.ready ? config.network : null,
       contractAddress: config.ready ? config.address : null, lastIndexedAt: last ? Number(last.value) : null,
       reason: config.ready ? null : config.reason });
   }
